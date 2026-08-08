@@ -1,0 +1,14 @@
+'use client'
+import {useEffect, useState} from 'react'
+import Link from 'next/link'
+
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+function useDebounced(value, delay=350){const [out,setOut]=useState(value);useEffect(()=>{const id=setTimeout(()=>setOut(value),delay);return()=>clearTimeout(id)},[value,delay]);return out}
+export default function Home(){
+  const [q,setQ]=useState(''),[topic,setTopic]=useState(''),[year,setYear]=useState(''),[page,setPage]=useState(1),[data,setData]=useState(null),[loading,setLoading]=useState(true),[error,setError]=useState('')
+  const debounced=useDebounced(q)
+  useEffect(()=>{setPage(1)},[debounced,topic,year])
+  useEffect(()=>{let cancelled=false;setLoading(true);setError('');const params=new URLSearchParams({page,page_size:20});if(debounced)params.set('q',debounced);if(topic)params.set('topic',topic);if(year)params.set('year',year);fetch(`${API}/papers?${params}`).then(r=>{if(!r.ok)throw Error('Unable to load papers');return r.json()}).then(v=>{if(!cancelled)setData(v)}).catch(e=>{if(!cancelled)setError(e.message)}).finally(()=>{if(!cancelled)setLoading(false)});return()=>{cancelled=true}},[debounced,topic,year,page])
+  return <main className="shell"><header className="header"><div><div className="brand">Research Radar</div><div className="subtle">Discover recent work across research fields</div></div></header><section className="controls"><input className="input" placeholder="Search title or abstract" value={q} onChange={e=>setQ(e.target.value)}/><input className="input" placeholder="Topic" value={topic} onChange={e=>setTopic(e.target.value)}/><input className="input" placeholder="Year" value={year} onChange={e=>setYear(e.target.value)}/><button className="button secondary" onClick={()=>{setQ('');setTopic('');setYear('')}}>Clear</button></section>{loading&&<div className="spinner">Loading papers...</div>}{error&&<div className="error">{error}. Check that the API is running and retry.</div>}{!loading&&!error&&data?.items?.length===0&&<div className="empty">No papers match these filters.</div>} {!loading&&!error&&<><div className="subtle">{data?.total||0} papers found</div><div className="grid">{data?.items?.map(p=><article className="paper" key={p.id}><Link href={`/papers/${p.id}`}><h2>{p.title}</h2></Link><div className="meta">{p.publication_year||'Year unknown'} · {p.authors.map(a=>a.name).join(', ')||'Unknown author'}</div><p>{p.abstract?(p.abstract.length>280?p.abstract.slice(0,280)+'…':p.abstract):'No abstract available.'}</p><div className="meta">{p.topics.map(t=>t.name).join(' · ')}</div></article>)}</div>{data?.pages>1&&<div className="pagination"><button className="button secondary" disabled={page<=1} onClick={()=>setPage(page-1)}>Previous</button><span>Page {page} of {data.pages}</span><button className="button secondary" disabled={page>=data.pages} onClick={()=>setPage(page+1)}>Next</button></div>}</>}</main>
+}
+
