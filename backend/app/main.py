@@ -20,6 +20,14 @@ def paper_query():
 def health():
     return {"status": "ok"}
 
+@app.get("/topics", response_model=list[str])
+def list_topics(db: Session = Depends(get_db)):
+    return db.scalars(select(Topic.name).distinct().order_by(Topic.name)).all()
+
+@app.get("/years", response_model=list[int])
+def list_years(db: Session = Depends(get_db)):
+    return db.scalars(select(Paper.publication_year).where(Paper.publication_year.is_not(None)).distinct().order_by(Paper.publication_year.desc())).all()
+
 @app.get("/papers", response_model=PaperPage)
 def list_papers(db: Session = Depends(get_db), page: int = Query(1, ge=1), page_size: int = Query(20, ge=1, le=100), q: str | None = None, year: int | None = None, topic: str | None = None, author: str | None = None):
     stmt = paper_query()
@@ -51,4 +59,3 @@ def get_similar(paper_id: int, db: Session = Depends(get_db)):
         raise HTTPException(404, "Paper not found")
     candidates = db.scalars(paper_query()).unique().all()
     return similar_papers(target, candidates)
-
