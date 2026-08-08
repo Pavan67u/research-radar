@@ -9,7 +9,13 @@ from app.database import SessionLocal
 from app.models import Author, Paper, Topic
 
 API = "https://api.openalex.org/works"
-TOPICS = {"machine learning": "T10757", "climate change": "T18427"}
+TOPICS = {
+    "machine learning in materials science": "T11948",
+    "species distribution and climate change": "T10895",
+    "advanced neural network applications": "T10036",
+    "HER2/EGFR in cancer research": "T10755",
+    "hybrid renewable energy systems": "T11007",
+}
 
 def reconstruct_abstract(index: dict | None) -> str:
     if not index:
@@ -66,7 +72,7 @@ def ingest_topic(db: Session, client: httpx.Client, label: str, topic_id: str, p
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--per-topic", type=int, default=200)
+    parser.add_argument("--per-topic", type=int, default=100)
     args = parser.parse_args()
     with httpx.Client(timeout=30, headers={"User-Agent": "research-radar/1.0"}) as client, SessionLocal() as db:
         total = sum(ingest_topic(db, client, label, topic_id, args.per_topic) for label, topic_id in TOPICS.items())
@@ -75,4 +81,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
